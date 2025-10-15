@@ -1,0 +1,137 @@
+openapi: 3.0.3
+info:
+  title: TestServer.Api
+  version: "1.0"
+servers:
+  - url: http://localhost:5132
+paths:
+  /employees:
+    get:
+      summary: Повертає усіх працівників чи пусту колекцію
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmployeeModel'
+    post:
+      summary: Створює нового працівника
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeModel'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeModel'
+        '400':
+          description: BadRequest (дублікат або невалідні дані)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /employees/{id}:
+    get:
+      summary: Повертає працівника за id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeModel'
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+    put:
+      summary: Змінює дані працівника (id змінювати заборонено)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeModel'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeModel'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeModel'
+        '400':
+          description: BadRequest (дублікат або невалідні дані)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+    delete:
+      summary: Видаляє працівника
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: Deleted }
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+components:
+  schemas:
+    CreateEmployeeModel:
+      type: object
+      required: [firstName, lastName, age]
+      properties:
+        firstName: { type: string, example: John }
+        lastName:  { type: string, example: Doe }
+        age:       { type: integer, minimum: 0, example: 30 }
+    EmployeeModel:
+      allOf:
+        - $ref: '#/components/schemas/CreateEmployeeModel'
+        - type: object
+          properties:
+            id: { type: integer, example: 1 }
+    ErrorModel:
+      type: object
+      properties:
+        error: { type: string }
