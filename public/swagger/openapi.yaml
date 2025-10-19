@@ -38,6 +38,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorModel'
+
   /employees/{id}:
     get:
       summary: Повертає працівника за id
@@ -116,6 +117,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorModel'
+
+  /api/crypto-keys/generate/rsa-keys:
+    post:
+      summary: Генерує пару RSA-ключів та повертає ідентифікатор
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+
+  /api/crypto-keys/rsa-public-key/{id}:
+    get:
+      summary: Повертає публічний RSA-ключ у base64 за id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0K..."
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+
 components:
   schemas:
     CreateEmployeeModel:
@@ -134,4 +174,4 @@ components:
     ErrorModel:
       type: object
       properties:
-        error: { type: string }
+        error: { type: string, example: "Employee not found" }

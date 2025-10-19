@@ -11,6 +11,5 @@
     </content>
     <orderEntry type="jdk" jdkName="ruby-3.3.5-p100" jdkType="RUBY_SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" scope="PROVIDED" name="nio4r (v2.7.4, ruby-3.3.5-p100) [gem]" level="application" />
   </component>
 </module>

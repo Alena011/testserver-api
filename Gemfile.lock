@@ -2,16 +2,27 @@ GEM
   remote: https://rubygems.org/
   specs:
     base64 (0.3.0)
+    diff-lcs (1.6.2)
     multi_json (1.17.0)
     mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
-    nio4r (2.7.4)
-    puma (6.6.1)
-      nio4r (~> 2.0)
     rack (2.2.20)
     rack-protection (3.2.0)
       base64 (>= 0.1.0)
       rack (~> 2.2, >= 2.2.4)
+    rspec (3.13.1)
+      rspec-core (~> 3.13.0)
+      rspec-expectations (~> 3.13.0)
+      rspec-mocks (~> 3.13.0)
+    rspec-core (3.13.5)
+      rspec-support (~> 3.13.0)
+    rspec-expectations (3.13.5)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-mocks (3.13.6)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-support (3.13.6)
     ruby2_keywords (0.0.5)
     sinatra (3.2.0)
       mustermann (~> 3.0)
@@ -25,14 +36,16 @@ GEM
       sinatra (= 3.2.0)
       tilt (~> 2.0)
     tilt (2.6.1)
+    webrick (1.9.1)
 
 PLATFORMS
   x64-mingw-ucrt
 
 DEPENDENCIES
-  puma (~> 6.4)
+  rspec (~> 3.13)
   sinatra (~> 3.0)
   sinatra-contrib (~> 3.0)
+  webrick (~> 1.8)
 
 BUNDLED WITH
    2.6.9

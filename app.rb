@@ -4,18 +4,29 @@
 require "sinatra"
 require "sinatra/json"
 require "json"
+require_relative "services/rsa_service"
+require "base64"
 
 set :bind, "0.0.0.0"
 set :port, 5132
 set :protection, except: [:json_csrf]
 set :show_exceptions, false
-#set :static, true # раздаём public/
+set :server, :webrick
+
+# раздача статичных (Swagger YAML)
 set :static, false
 set :public_folder, File.join(__dir__, "public")
 
+# In-memory стор для сотрудников
 STORE = {
   next_id: 1,
-  employees: [] # {id:, firstName:, lastName:, age:}
+  employees: []
+}
+
+# In-memory стор для RSA ключей
+RSA_STORE = {
+  next_id: 1,
+  items: {}
 }
 
 helpers do
@@ -63,31 +74,30 @@ end
 
 # CORS — применяется ко всем запросам
 before do
-  headers 'Access-Control-Allow-Origin'  => '*',
-          'Access-Control-Allow-Methods' => 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers' => 'Content-Type, Authorization, Accept'
+  headers "Access-Control-Allow-Origin"  => "*",
+          "Access-Control-Allow-Methods" => "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers" => "Content-Type, Authorization, Accept"
 end
 
-options '*' do
+options "*" do
   200
 end
 
-# Явный роут для YAML (с теми же заголовками)
-get '/swagger/openapi.yaml' do
-  content_type 'text/yaml'
-  headers 'Access-Control-Allow-Origin'  => '*',
-          'Access-Control-Allow-Methods' => 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers' => 'Content-Type, Authorization, Accept'
-  send_file File.join(settings.public_folder, 'swagger', 'openapi.yaml')
+# Swagger YAML
+get "/swagger/openapi.yaml" do
+  content_type "text/yaml"
+  headers "Access-Control-Allow-Origin"  => "*",
+          "Access-Control-Allow-Methods" => "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers" => "Content-Type, Authorization, Accept"
+  send_file File.join(settings.public_folder, "swagger", "openapi.yaml")
 end
 
+# Employees CRUD
 
-# GET /employees — вернуть всех
 get "/employees" do
   json STORE[:employees]
 end
 
-# GET /employees/:id — вернуть по id или 404
 get "/employees/:id" do
   id = parse_int(params[:id])
   halt 404, json(error: "Employee not found") unless id
@@ -95,10 +105,8 @@ get "/employees/:id" do
   json emp
 end
 
-# POST /employees — создать, Content-Type: application/json
-# Тело: { "firstName": "...", "lastName": "...", "age": 0 }
 post "/employees" do
-  payload = parse_json_body
+  payload    = parse_json_body
   first_name = sanitize_name(payload["firstName"])
   last_name  = sanitize_name(payload["lastName"])
   age        = parse_int(payload["age"])
@@ -122,15 +130,13 @@ post "/employees" do
   json emp
 end
 
-# PUT /employees/:id — обновить
-# По ТЗ: application/x-www-form-urlencoded.
 put "/employees/:id" do
   id = parse_int(params[:id])
   halt 404, json(error: "Employee not found") unless id
   emp = find_employee!(id)
 
   if request.media_type&.include?("application/json")
-    payload = parse_json_body
+    payload    = parse_json_body
     first_name = sanitize_name(payload["firstName"] || emp[:firstName])
     last_name  = sanitize_name(payload["lastName"]  || emp[:lastName])
     age        = parse_int(payload.key?("age") ? payload["age"] : emp[:age])
@@ -154,7 +160,6 @@ put "/employees/:id" do
   json emp
 end
 
-# DELETE /employees/:id — удалить, 200 или 404
 delete "/employees/:id" do
   id = parse_int(params[:id])
   halt 404, json(error: "Employee not found") unless id
@@ -164,19 +169,43 @@ delete "/employees/:id" do
   json message: "Deleted"
 end
 
-#  Простая страничка с ссылкой на Swagger
+#  RSA API
+
+# POST -> сгенерировать пару, вернуть id
+post "/api/crypto-keys/generate/rsa-keys" do
+  keys = RsaService.new.generate_crypto_keys
+  id = RSA_STORE[:next_id]
+  RSA_STORE[:items][id] = keys
+  RSA_STORE[:next_id] += 1
+  status 201
+  json id: id
+rescue => e
+  halt 400, json(error: e.message)
+end
+
+# GET вернуть публичный ключ в base64 по id
+get "/api/crypto-keys/rsa-public-key/:id" do
+  id = parse_int(params[:id])
+  halt 404, json(error: "Key pair not found") unless id && RSA_STORE[:items].key?(id)
+  pub_pem = RSA_STORE[:items][id].public_key
+  content_type "text/plain"
+  Base64.strict_encode64(pub_pem)
+end
+
+# Домашняя
 get "/" do
   <<~HTML
     <h1>TestServer.Api</h1>
     <p>CRUD: /employees</p>
+    <p>RSA: POST /api/crypto-keys/generate/rsa-keys → {"id":N}</p>
+    <p>RSA: GET /api/crypto-keys/rsa-public-key/{id} → base64(public key PEM)</p>
     <p>OpenAPI: <a href="/swagger/openapi.yaml">/swagger/openapi.yaml</a></p>
   HTML
 end
 
-# Глобальный обработчик ошибок (красиво отдаём JSON)
+# Глобальный обработчик ошибок
 error do
   e = env["sinatra.error"]
   status 500
   json error: e.message
 end
-
